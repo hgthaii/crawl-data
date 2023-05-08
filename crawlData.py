@@ -4,6 +4,7 @@ import pymongo
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime
+import os
 
 def add_id_to_dict(d):
     stack = [d]
@@ -17,7 +18,7 @@ def add_id_to_dict(d):
             stack.extend(current)
 
 # Kết nối đến MongoDB
-client = MongoClient('mongodb+srv://admin:admin@finder.yo9axq1.mongodb.net')
+client = MongoClient(os.environ.get('MONGODB_URL'))
 db = client['test']
 collection = db['shows']
 
