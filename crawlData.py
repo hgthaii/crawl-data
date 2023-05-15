@@ -5,6 +5,9 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime
 import os
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 
 def add_id_to_dict(d):
     stack = [d]
@@ -19,10 +22,11 @@ def add_id_to_dict(d):
 
 # Kết nối đến MongoDB
 client = MongoClient(os.environ.get('MONGODB_URL'))
-db = client['test']
-collection = db['shows']
 
-target_url = "https://www.netflix.com/browse?jbv=81665914"
+db = client['test']
+collection = db['movies']
+
+target_url = "https://www.netflix.com/browse?jbv=80002479"
 headers = {'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'}
 resp = requests.get(target_url, headers=headers)
 resp.encoding = 'utf-8' # Thiết lập encoding
@@ -32,8 +36,11 @@ soup = BeautifulSoup(html, 'html.parser')
 
 o = {}
 casts = []
+programs = []
 genres = []
+creators = []
 episodes = []
+posters = []
 e = {}
 
 title = soup.find("h1", {"class": "title-title"})
@@ -51,9 +58,13 @@ release_date = soup.find("span", {"class": "item-year"})
 if release_date:
     o["release_date"] = release_date.text
 
-img_tag = soup.find('source', {'srcset': True})
-if img_tag:
-    o["poster_path"] = img_tag['srcset']
+img_tag = soup.find_all('source', {'srcset': True})
+for img in img_tag:
+    img_object = {
+        "path": img['srcset']
+    }
+    posters.append(img_object)
+o["poster_path"] = posters
 
 overview = soup.find("div", {"class": "title-info-synopsis"})
 if overview is not None:
@@ -61,11 +72,33 @@ if overview is not None:
 else:
     o["overview"] = ""
 
-# trailer = soup.find("img", {"class":"additional-video-image-preloader"})
-# if trailer:
-o["trailer"] = ""
-# else:
-    # o["trailer"] = trailer["src"]
+def search_youtube(query):
+    base_url = "https://www.youtube.com"
+    search_url = f"{base_url}/results?search_query={query}"
+    
+    # Cấu hình Selenium WebDriver
+    # driver_service = Service('path/to/chromedriver')
+    driver = webdriver.Chrome()
+    
+    driver.get(search_url)
+    
+    video_element = driver.find_element(By.CSS_SELECTOR, ".style-scope.ytd-video-renderer")
+    child_elements = video_element.find_elements(By.CSS_SELECTOR, "a")
+    if child_elements:
+        first_child_element = child_elements[0]
+        video_url = first_child_element.get_attribute("href")
+        return video_url
+    
+    driver.quit()  # Đóng trình duyệt
+    
+    return None
+
+# Tìm kiếm trên Google
+query = "Trailer+" + o['title'].replace(" ", "+")
+trailer_url = search_youtube(query)
+
+if trailer_url:
+    o["trailer"] = trailer_url
 
 o["video"] = ""
 
@@ -103,6 +136,35 @@ for tag in cast_tags:
     casts.append(cast_object)
 
 o["casts"] = casts
+
+program_type = soup.find_all("span", {"class": "more-details-item item-mood-tag"})
+for types in program_type:
+    name = types.text.replace(",", "")
+    if name:
+        program_object = {
+            "name": name
+        }
+        programs.append(program_object)
+o["program_type"] = programs
+
+age_rating = soup.find("span", {"class": "maturity-number"})
+if age_rating:
+    o["age_rating"] = age_rating.text.strip()
+
+info_creators = soup.find("span", {"data-uia": "info-creators"})
+if info_creators:
+    creators_list = info_creators.text.split(",")
+    for creator in creators_list:
+        creator_object = {
+            "name": creator.strip() # Sử dụng strip() để loại bỏ khoảng trắng thừa
+        }
+        creators.append(creator_object)
+o["creators"] = creators
+
+item_genre = soup.find("a", {"class": "title-info-metadata-item item-genre"})
+if item_genre:
+    o["item_genre"] = item_genre.text
+
 
 add_id_to_dict(o) # Thêm `_id` cho tất cả các object con trong document
 
