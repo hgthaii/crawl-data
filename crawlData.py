@@ -15,18 +15,19 @@ def add_id_to_dict(d):
         current = stack.pop()
         if isinstance(current, dict):
             if "_id" not in current:
-                current["_id"] = str(ObjectId())
+                current["_id"] = ObjectId()
             stack.extend(current.values())
         elif isinstance(current, list):
             stack.extend(current)
 
 # Kết nối đến MongoDB
-client = MongoClient(os.environ.get('MONGODB_URL'))
+# client = MongoClient(os.environ.get('MONGODB_URL'))
+client = MongoClient('mongodb+srv://admin:admin@finder.yo9axq1.mongodb.net/?retryWrites=true&w=majority')
 
 db = client['test']
 collection = db['movies']
 
-target_url = "https://www.netflix.com/browse?jbv=80002479"
+target_url = "https://www.netflix.com/browse?jbv=81574246"
 headers = {'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'}
 resp = requests.get(target_url, headers=headers)
 resp.encoding = 'utf-8' # Thiết lập encoding
@@ -98,7 +99,8 @@ query = "Trailer+" + o['title'].replace(" ", "+")
 trailer_url = search_youtube(query)
 
 if trailer_url:
-    o["trailer"] = trailer_url
+    trailer = trailer_url.replace('watch?v=', 'embed/')
+    o["trailer"] = trailer.split('&')[0]
 
 o["video"] = ""
 
@@ -128,11 +130,16 @@ for tag in episodes_tags:
 
 o["episodes"] = episodes
 
+casts_collection = db['casts']
 cast_tags = soup.find_all("span", {"class": "item-cast"})
 for tag in cast_tags:
-    cast_object = {
-        "name": tag.text
-    }
+    cast_object = casts_collection.find_one({"name": tag.text})
+    if cast_object:
+        cast_object["_id"] = str(cast_object["_id"])
+    else:
+        cast_object = {"name": tag.text}
+        casts_collection.insert_one(cast_object)
+        cast_object["_id"] = str(cast_object["_id"])
     casts.append(cast_object)
 
 o["casts"] = casts
