@@ -1,1 +1,6 @@
 /.env
+*.mp4
+index.html
+index.js
+seen.py
+style.css

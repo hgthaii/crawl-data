@@ -1,13 +1,14 @@
+import os
 import requests
 from bs4 import BeautifulSoup
-import pymongo
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime
-import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from pytube import YouTube
+# import b2sdk.v1 as b2
 
 def add_id_to_dict(d):
     stack = [d]
@@ -20,14 +21,29 @@ def add_id_to_dict(d):
         elif isinstance(current, list):
             stack.extend(current)
 
+# Cấu hình thông tin xác thực B2 Cloud Storage
+# application_key_id = os.environ.get('APPLICATION_KEY_ID')
+# application_key = os.environ.get('APPLICATION_KEY')
+# bucket_name = os.environ.get('BUCKET_NAME')
+
+# Khởi tạo B2 SDK
+# info = b2.InMemoryAccountInfo()
+# b2_api = b2.B2Api(info)
+# b2_api.authorize_account("production", application_key_id, application_key)
+
 # Kết nối đến MongoDB
-# client = MongoClient(os.environ.get('MONGODB_URL'))
-client = MongoClient('mongodb+srv://admin:admin@finder.yo9axq1.mongodb.net/?retryWrites=true&w=majority')
+client = MongoClient(os.environ.get('MONGODB_URL'))
 
 db = client['test']
 collection = db['movies']
 
-target_url = "https://www.netflix.com/browse?jbv=81574246"
+base_netflix_url = "https://www.netflix.com/browse?jbv="
+jbv_values = ["60023642", "81451264", "81328781", "80991755", "81652327", "81199145", "80204465", "70230640", "70298991", "81198933", "81483977"]
+
+for jbv in jbv_values:
+    target_url = base_netflix_url + jbv
+
+
 headers = {'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'}
 resp = requests.get(target_url, headers=headers)
 resp.encoding = 'utf-8' # Thiết lập encoding
@@ -98,11 +114,26 @@ def search_youtube(query):
 query = "Trailer+" + o['title'].replace(" ", "+")
 trailer_url = search_youtube(query)
 
+# yt = YouTube(trailer_url)
+# video = yt.streams.get_highest_resolution()
+# video_path = video.download()
+
+# Tải lên video lên B2 Cloud Storage
+# file_name = title.text + '.mp4'
+# bucket = b2_api.get_bucket_by_name(bucket_name)
+# bucket.upload_local_file(video_path, file_name)
+
+# Lấy liên kết video từ B2 Cloud Storage
+# file_info = bucket.get_file_info_by_name(file_name)
+# file_url = b2_api.get_download_url_for_file_name(bucket_name, file_name)
+
+# if video_path:
+o["video"] = ''
+
 if trailer_url:
     trailer = trailer_url.replace('watch?v=', 'embed/')
     o["trailer"] = trailer.split('&')[0]
 
-o["video"] = ""
 
 genre_tags = soup.find_all("span", {"class": "item-genres"})
 genre_collection = db["genres"]
@@ -111,11 +142,11 @@ for tag in genre_tags:
     genre_name = tag.text.replace(",", "")
     genre_obj = genre_collection.find_one({"name": genre_name})
     if genre_obj:
-        genre_obj["_id"] = str(genre_obj["_id"])
+        genre_obj["_id"] = ObjectId(str(genre_obj["_id"]))
     else:
         genre_obj = {"name": genre_name}
         genre_collection.insert_one(genre_obj)
-        genre_obj["_id"] = str(genre_obj["_id"])
+        genre_obj["_id"] = ObjectId(str(genre_obj["_id"]))
     genres.append(genre_obj)
 o["genres"] = genres
 
@@ -135,11 +166,11 @@ cast_tags = soup.find_all("span", {"class": "item-cast"})
 for tag in cast_tags:
     cast_object = casts_collection.find_one({"name": tag.text})
     if cast_object:
-        cast_object["_id"] = str(cast_object["_id"])
+        cast_object["_id"] = ObjectId(str(cast_object["_id"]))
     else:
         cast_object = {"name": tag.text}
         casts_collection.insert_one(cast_object)
-        cast_object["_id"] = str(cast_object["_id"])
+        cast_object["_id"] = ObjectId(str(cast_object["_id"]))
     casts.append(cast_object)
 
 o["casts"] = casts
