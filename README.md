@@ -1,4 +1,4 @@
-# README
+# LẤY DỮ LIỆU PHIM TỪ NETFLIX
 
 Đây là một đoạn code viết bằng Python để thu thập thông tin về các bộ phim trên Netflix và lưu trữ vào cơ sở dữ liệu MongoDB. Dưới đây là mô tả chi tiết về các thành phần chính và cách sử dụng code này.
 
