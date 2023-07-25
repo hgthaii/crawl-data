@@ -35,7 +35,7 @@
 1. Chạy script bằng cách chạy lệnh sau trong command line:
 
    ```
-   python get.py
+   py get.py
    ```
 
 2. Script sẽ thu thập thông tin về các bộ phim trên Netflix và lưu trữ chúng vào cơ sở dữ liệu MongoDB đã cấu hình.
@@ -53,9 +53,7 @@
 
 - `requests` để gửi yêu cầu HTTP và nhận phản hồi từ trang web Netflix.
 - `beautifulsoup4` để phân tích cú pháp HTML và trích xuất thông tin từ trang web Netflix.
-- `pymongo` để kết nối và t
-
-ương tác với cơ sở dữ liệu MongoDB.
+- `pymongo` để kết nối và tương tác với cơ sở dữ liệu MongoDB.
 - `selenium` để tìm kiếm trên trang web YouTube và lấy URL của trailer.
 - `pytube` để tải xuống video từ YouTube (chưa được sử dụng trong phiên bản hiện tại).
 - Đoạn code có chứa các chức năng phụ trợ để thêm `_id` cho các object con và định dạng dữ liệu thành các document MongoDB.
